@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -65,9 +66,11 @@ func main() {
 
 	// Sort Output Map
 	keys := make([]string, 0, len(output))
+	modifiedKeys := make([]string, 0, len(output))
 
 	for k := range output {
 		keys = append(keys, k)
+		modifiedKeys = append(modifiedKeys, strings.Replace(k, "-", "\n", -1))
 	}
 	// create a new bar instance
 	bar := charts.NewBar()
@@ -75,13 +78,18 @@ func main() {
 	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title: "Gitleak-Charter",
 	}))
+	bar.SetGlobalOptions(charts.WithXAxisOpts(opts.XAxis{AxisLabel: &opts.AxisLabel{Interval: "0", Show: true, ShowMinLabel: true, ShowMaxLabel: true}}))
 
-	bar.Initialization.Width = "1200"
+	bar.Initialization.Width = "500"
 
 	// Put data into instance
 	sort.Strings(keys)
-	bar.SetXAxis(keys).
-		AddSeries("Amount of Leaktype", generateBarLeakItems(keys, output))
+	sort.Strings(modifiedKeys)
+
+	bar.SetXAxis(modifiedKeys).
+		AddSeries("Amount of Leaktype", generateBarLeakItems(keys, output), charts.WithLabelOpts(opts.Label{Show: true}))
+
+	bar.SetXAxis(modifiedKeys)
 
 	// Where the magic happens
 	f, _ := os.Create(os.Getenv("LC_BAR_OUTPUT_FILE"))
