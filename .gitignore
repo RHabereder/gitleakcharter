@@ -14,6 +14,11 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# HTML Output Files
+*.html
+
+# JSON Input Files
+*.json
 
 # Common credential files
 .env
