@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -22,20 +19,15 @@ var inputFileDir string
 var outputFile string
 var allFiles []string
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "leakcharter",
 	Short: "Creates fancy bar charts for Gitleaks Reports",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		walkAllFiles(inputFileDir, ".json")
 		generateBarChart(inputFileDir, outputFile)
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -44,10 +36,8 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
 	rootCmd.Flags().StringVarP(&inputFileDir, "file", "f", "report.json", "Input report to feed into the Chart-Generator")
 	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "chart.html", "Output-Filename")
-	//rootCmd.MarkFlagFilename("file", ".json")
 	rootCmd.MarkFlagDirname("file")
 	rootCmd.MarkFlagRequired("file")
 	rootCmd.MarkFlagRequired("output")
@@ -70,9 +60,6 @@ func removeDuplicateValues(slice []string) []string {
 	keys := make(map[string]bool)
 	list := []string{}
 
-	// If the key(values of the slice) is not equal
-	// to the already present value in new slice (list)
-	// then we append it. else we jump on another element.
 	for _, entry := range slice {
 		if _, value := keys[entry]; !value {
 			keys[entry] = true
@@ -156,12 +143,10 @@ func generateBarChart(inputFile string, outputFile string) {
 	modifiedKeys := removeDuplicateValues(allKeys)
 	bar.SetXAxis(modifiedKeys)
 
-	// Where the magic happens
 	f, _ := os.Create(outputFile)
 	bar.Render(f)
 }
 
-// generate random data for bar chart
 func generateBarLeakItems(keys []string, reportItems map[string][]ReportItem) []opts.BarData {
 	items := make([]opts.BarData, 0)
 	for _, k := range keys {
