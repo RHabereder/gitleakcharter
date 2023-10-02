@@ -10,12 +10,20 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.11' # Go installation path
+  GOVERSION: '1.20'
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  GOROOT: '/usr/local/$(GOVERSION)' # Go installation path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
 steps:
+
+- task: GoTool@0
+  inputs:
+    version: '$(GOVERSION)'
+    goPath: '$(GOPATH)'
+    goBin: '$(GOBIN)'
+
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
