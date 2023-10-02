@@ -1,14 +1,17 @@
+// Package cmd Implements cobra commands for the CLI
 package cmd
 
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -17,17 +20,21 @@ import (
 
 var inputFileDir string
 var outputFile string
+var fileExtension string
 var allFiles []string
+var Logger log.Logger
 
 var rootCmd = &cobra.Command{
-	Use:   "leakcharter",
-	Short: "Creates fancy bar charts for Gitleaks Reports",
+	Use:    "leakcharter",
+	PreRun: toggleDebug,
+	Short:  "Creates fancy bar charts for Gitleaks Reports",
 	Run: func(cmd *cobra.Command, args []string) {
-		walkAllFiles(inputFileDir, ".json")
-		generateBarChart(inputFileDir, outputFile)
+		walkAllFiles(inputFileDir, "."+fileExtension)
+		generateBarChart(outputFile)
 	},
 }
 
+// Execute runs the root command
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -36,17 +43,27 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&inputFileDir, "file", "f", "report.json", "Input report to feed into the Chart-Generator")
+	rootCmd.Flags().StringVarP(&inputFileDir, "file", "f", "./reports/", "Directory with reports to feed into the Chart-Generator")
 	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "chart.html", "Output-Filename")
-	rootCmd.MarkFlagDirname("file")
-	rootCmd.MarkFlagRequired("file")
-	rootCmd.MarkFlagRequired("output")
+	rootCmd.Flags().StringVarP(&fileExtension, "extension", "e", "json", "Extension of Report files to scan for")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "verbose logging")
+	err := rootCmd.MarkFlagDirname("file")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = rootCmd.MarkFlagRequired("file")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = rootCmd.MarkFlagRequired("output")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func walkAllFiles(directory string, extension string) {
-	filepath.Walk(inputFileDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		if !info.IsDir() && filepath.Ext(path) == extension {
@@ -54,6 +71,9 @@ func walkAllFiles(directory string, extension string) {
 		}
 		return nil
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func removeDuplicateValues(slice []string) []string {
@@ -74,18 +94,18 @@ func readAllKeys(allFiles []string) []string {
 	for _, file := range allFiles {
 		var reportItems []ReportItem
 
-		file, err := os.Open(file)
+		file, _ := os.Open(file)
 		defer file.Close()
 
-		stat, err := file.Stat()
+		stat, _ := file.Stat()
 		bs := make([]byte, stat.Size())
-		_, err = bufio.NewReader(file).Read(bs)
+		_, err := bufio.NewReader(file).Read(bs)
 		if err != nil && err != io.EOF {
-			fmt.Println(err)
+			log.Fatal(err)
 		}
 
 		if err := json.Unmarshal([]byte(bs), &reportItems); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 
 		for _, item := range reportItems {
@@ -95,7 +115,7 @@ func readAllKeys(allFiles []string) []string {
 	return removeDuplicateValues(allKeys)
 }
 
-func generateBarChart(inputFile string, outputFile string) {
+func generateBarChart(outputFile string) {
 	barDatas := make(map[string][]opts.BarData, len(allFiles))
 
 	bar := charts.NewBar()
@@ -111,28 +131,30 @@ func generateBarChart(inputFile string, outputFile string) {
 		output := make(map[string][]ReportItem)
 
 		var reportItems []ReportItem
-
-		file, err := os.Open(file)
+		log.Debug("Reading file " + file)
+		file, _ := os.Open(file)
 		defer file.Close()
 
-		stat, err := file.Stat()
+		stat, _ := file.Stat()
 		bs := make([]byte, stat.Size())
-		_, err = bufio.NewReader(file).Read(bs)
+		_, err := bufio.NewReader(file).Read(bs)
 		if err != nil && err != io.EOF {
-			fmt.Println(err)
+			log.Fatal(err)
 			return
 		}
 
+		log.Debug("Unmarshalling " + file.Name())
 		if err := json.Unmarshal([]byte(bs), &reportItems); err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 
+		log.Debug("Unmarshalled " + strconv.Itoa(len(reportItems)) + " ReportItems")
 		for _, item := range reportItems {
 			output[item.RuleID] = append(output[item.RuleID], item)
 		}
 
 		sort.Strings(removeDuplicateValues(allKeys))
-		barDatas[file.Name()] = append(generateBarLeakItems(allKeys, output))
+		barDatas[file.Name()] = generateBarLeakItems(allKeys, output)
 
 	}
 
@@ -144,7 +166,10 @@ func generateBarChart(inputFile string, outputFile string) {
 	bar.SetXAxis(modifiedKeys)
 
 	f, _ := os.Create(outputFile)
-	bar.Render(f)
+	err := bar.Render(f)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func generateBarLeakItems(keys []string, reportItems map[string][]ReportItem) []opts.BarData {
@@ -155,6 +180,8 @@ func generateBarLeakItems(keys []string, reportItems map[string][]ReportItem) []
 	return items
 }
 
+// ReportItem is a Struct for unmarshalling Gitleaks Report Items
+// for easier handling than raw JSON parsing
 type ReportItem struct {
 	Description string    `json:"Description"`
 	StartLine   int       `json:"StartLine"`
