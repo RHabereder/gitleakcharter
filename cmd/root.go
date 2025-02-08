@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -183,22 +182,22 @@ func generateBarLeakItems(keys []string, reportItems map[string][]ReportItem) []
 // ReportItem is a Struct for unmarshalling Gitleaks Report Items
 // for easier handling than raw JSON parsing
 type ReportItem struct {
-	Description string    `json:"Description"`
-	StartLine   int       `json:"StartLine"`
-	EndLine     int       `json:"EndLine"`
-	StartColumn int       `json:"StartColumn"`
-	EndColumn   int       `json:"EndColumn"`
-	Match       string    `json:"Match"`
-	Secret      string    `json:"Secret"`
-	File        string    `json:"File"`
-	SymlinkFile string    `json:"SymlinkFile"`
-	Commit      string    `json:"Commit"`
-	Entropy     float64   `json:"Entropy"`
-	Author      string    `json:"Author"`
-	Email       string    `json:"Email"`
-	Date        time.Time `json:"Date"`
-	Message     string    `json:"Message"`
-	Tags        []any     `json:"Tags"`
-	RuleID      string    `json:"RuleID"`
-	Fingerprint string    `json:"Fingerprint"`
+	RuleID      string        `json:"RuleID"`
+	Description string        `json:"Description"`
+	StartLine   int           `json:"StartLine"`
+	EndLine     int           `json:"EndLine"`
+	StartColumn int           `json:"StartColumn"`
+	EndColumn   int           `json:"EndColumn"`
+	Match       string        `json:"Match"`
+	Secret      string        `json:"Secret"`
+	File        string        `json:"File"`
+	SymlinkFile string        `json:"SymlinkFile"`
+	Commit      string        `json:"Commit"`
+	Entropy     float32       `json:"Entropy"`
+	Author      string        `json:"Author"`
+	Email       string        `json:"Email"`
+	Date        string        `json:"Date"`
+	Message     string        `json:"Message"`
+	Tags        []interface{} `json:"Tags"`
+	Fingerprint string        `json:"Fingerprint"`
 }
